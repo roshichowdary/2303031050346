@@ -353,4 +353,284 @@ Cache	Very Fast	Memory Cost
 Pagination	Less Load	Multiple Requests
 WebSocket	Real-time	More Server Connections
 Read Replica	Better Reads	Replication Delay
-Archiving	Smaller Active Table	Archived Data Access Slower
+Archiving	Smaller Active Table	
+
+
+# stage 5
+
+What is the question asking?
+
+The HR clicks "Notify All", and 50,000 students should receive:
+
+Email notification
+In-app notification
+
+The current implementation is:
+
+for each student:
+    send_email()
+    save_to_db()
+    push_to_app()
+
+You need to:
+
+Find the problems.
+Explain what happens when email fails.
+Design a better architecture.
+Write improved pseudocode.
+Explain whether DB save and email should happen together.
+Step 1: Mention the shortcomings
+
+Write points like these:
+
+Processing is sequential, so it is very slow.
+If email fails, the loop becomes inconsistent.
+External email APIs can be slow.
+A single failure affects the entire process.
+No retry mechanism.
+No failure tracking.
+No scalability.
+No parallel processing.
+Poor user experience.
+Step 2: Explain the email failure
+
+Question:
+
+Email failed for 200 students. What now?
+
+Answer:
+
+Those students will not receive emails.
+Some students already received emails while others did not.
+There is no retry mechanism.
+The system does not know which students failed.
+Manual intervention may be required.
+Step 3: Suggest a better architecture
+
+Instead of directly sending emails, use a message queue.
+
+Architecture:
+
+HR clicks Notify All
+        │
+        ▼
+Notification API
+        │
+        ▼
+Save notification in Database
+        │
+        ▼
+Push message to Queue
+        │
+        ▼
+Multiple Workers
+      /     \
+Email Worker  App Notification Worker
+
+You can mention technologies like:
+
+RabbitMQ
+Kafka
+Amazon SQS
+Step 4: Explain Retry Mechanism
+
+Worker logic:
+
+Email fails
+
+↓
+
+Retry 3 times
+
+↓
+
+Still fails
+
+↓
+
+Move to Dead Letter Queue
+
+↓
+
+Admin can investigate later
+
+This makes the system reliable.
+
+Step 5: Revised pseudocode
+
+Write improved pseudocode like:
+
+function notify_all(student_ids, message):
+
+    notification_id = save_notification(message)
+
+    for each student_id:
+
+        save_student_notification(notification_id, student_id)
+
+        queue.publish({
+            student_id,
+            notification_id,
+            message
+        })
+
+
+
+Worker:
+
+while true:
+
+    job = queue.consume()
+
+    try:
+        send_email(job.student_id, job.message)
+
+        push_to_app(job.student_id, job.message)
+
+        mark_as_sent(job.notification_id)
+
+    except:
+
+        retry(job)
+
+        if retry_limit_exceeded:
+            move_to_dead_letter_queue(job)
+
+Step 6: Should DB save and Email happen together?
+
+Answer:
+
+No.
+
+Reason:
+
+Database is your source of truth.
+Email is an external service.
+Email can fail.
+Saving notification should happen first.
+Email should be processed asynchronously through workers.
+
+
+
+# stage 6
+
+Stage 6 – Priority Inbox (Coding Stage)
+
+This is the first coding stage.
+
+What is the question asking?
+
+Use the given Notification API.
+
+Do NOT hardcode notifications.
+
+Fetch notifications from the API.
+
+Find the Top 10 unread notifications based on:
+
+Notification Type
+Recency
+
+Priority:
+
+Placement = Highest
+
+Result = Medium
+
+Event = Lowest
+
+Recent notifications should also rank higher.
+
+Step 1
+
+Create a code file.
+
+Example:
+
+priority_notifications.js
+
+or
+
+priority_notifications.ts
+Step 2
+
+Fetch notifications
+
+Use the provided API.
+
+Do not create your own data.
+
+Step 3
+
+Assign weights
+
+Example:
+
+Placement = 3
+
+Result = 2
+
+Event = 1
+Step 4
+
+Calculate score
+
+Example logic:
+
+Priority Score
+
+=
+
+Type Weight
+
++
+
+Recency Score
+
+Recent notifications get higher score.
+
+Step 5
+
+Sort
+
+Sort notifications by score in descending order.
+
+Step 6
+
+Take Top 10
+
+sortedNotifications.slice(0,10)
+Step 7
+
+Display output
+
+Print:
+
+ID
+Type
+Message
+Timestamp
+
+Take a screenshot.
+
+Push screenshot to GitHub.
+
+Step 8
+
+Answer:
+
+New notifications keep coming. How will you maintain Top 10 efficiently?
+
+Best answer:
+
+Use a Min Heap of size 10.
+
+Why?
+
+Instead of sorting all notifications repeatedly:
+
+Heap always stores only top 10.
+Every new notification takes O(log 10).
+Very efficient.
+
+Mention this in Stage 6 explanation.
